@@ -5,6 +5,8 @@
 
 class Network {
 private:
-	std
-
+	std::string activation;
+public:
+	Network();
+	~Network();
 };
