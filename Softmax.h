@@ -13,7 +13,8 @@ public:
 	void setUpstream(v2d* upstream);
 	void setDownstream(v2d* downstream);
 	v2d* getActivations();
-	void forward(v2d* labels);
-	void backward();
+	v2d* getGradient();
+	void forward();
+	void backward(v2d* labels);
 };
 

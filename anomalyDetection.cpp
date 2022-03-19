@@ -39,7 +39,8 @@ int main() {
         int start = i * BATCHSIZE,
             end = (i + 1) * BATCHSIZE;
         readDataset(&filestream, &batch, &labels, start, end);
-        network.train(&batch, &labels);
+        float epochError = network.train(&batch, &labels);
+        cout << "epoch " << i << ", error=" << epochError << endl;
     }
     filestream.close();
 

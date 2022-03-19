@@ -11,6 +11,7 @@ private:
 	Fct actFct = Fct::relu;
 	std::vector<Dense*> layers;
 	Softmax* softmax;
+	float learningRate = 0.0005;
 public:
 	Network(int inputLayerSize, int hiddenLayersCount, int hiddenLayerSize, int outputLayerSize);
 	Network(int inputLayerSize, int outputLayerSize) : Network(inputLayerSize, 0, 0, outputLayerSize) {};
@@ -19,5 +20,6 @@ public:
 	v1d predict(v1d* input);
 	void setActivationFct(Fct fct);
 	void initialise();
+	void setLearningRate(float eta);
 	~Network();
 };
