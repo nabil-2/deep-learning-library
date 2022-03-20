@@ -20,12 +20,11 @@ v2d MathNN::MMProduct(v2d* matrix1, v2d* matrix2) {
 	std::vector<std::vector<int>> threadDistr;
 	if (HEIGHT < threadCount) {
 		threadCount = HEIGHT;
-	} else {
-		int cut = (int) HEIGHT / threadCount;
-		for (int i = 0; i < threadCount; i++) {
-			int end = threadCount-1 == i ? HEIGHT : (i + 1) * cut;
-			threadDistr.push_back({ i*cut, end});
-		}
+	}
+	int cut = (int)HEIGHT / threadCount;
+	for (int i = 0; i < threadCount; i++) {
+		int end = threadCount - 1 == i ? HEIGHT : (i + 1) * cut;
+		threadDistr.push_back({ i * cut, end });
 	}
 	std::vector<std::thread> threads = std::vector<std::thread>(threadDistr.size());
 	std::vector<v2d*> subResults;

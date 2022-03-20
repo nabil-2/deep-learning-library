@@ -86,9 +86,9 @@ void learnMNITS() {
     const int OUTPUT_LAYER_SIZE = 10;
     const int HIDDEN_LAYERS_COUNT = 5;
     const int HIDDEN_LAYERS_SIZE = 256;
-    const int TEST_SIZE = 1000;
-    const int BATCHSIZE = 256;
-    const int EPOCHS = 300;
+    const int TEST_SIZE = 500;
+    const int BATCHSIZE = 512;
+    const int EPOCHS = 400;
     Network network(
         INPUT_LAYER_SIZE,
         HIDDEN_LAYERS_COUNT,
@@ -112,9 +112,12 @@ void learnMNITS() {
         int start = i * BATCHSIZE + testData[0].size();
         end = (i + 1) * BATCHSIZE + testData[0].size();
         readDataset(&batch, &labels, trainingDataset, start, end);
+        if (batch.size() == 0) break;
         float epochError = network.train(&batch, &labels, true);
         cout << "epoch " << i + 1 << ", error=" << epochError << endl;
     }
+    cout << "finished" << endl;
+    system("pause");
 }
 
 extern "C" {
@@ -150,6 +153,7 @@ void readDataset(v2d* batch, v2d* labels, std::string path, int start, int end) 
             (*labels).push_back(label);
         }
     }
+    if (batch->size() == 0) return;
     *batch = MathNN::transpose(batch);
     *labels = MathNN::transpose(labels);
 }
