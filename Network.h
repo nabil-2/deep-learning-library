@@ -12,12 +12,19 @@ private:
 	std::vector<Dense*> layers;
 	Softmax* softmax;
 	float learningRate = 0.0005;
+	int epoch = 0;
+	v2d *testData = nullptr,
+		*testLabels = nullptr;
+	std::string evaluationFile;
+	void evaluate();
 public:
 	Network(int inputLayerSize, int hiddenLayersCount, int hiddenLayerSize, int outputLayerSize);
 	Network(int inputLayerSize, int outputLayerSize) : Network(inputLayerSize, 0, 0, outputLayerSize) {};
 	void addHiddenLayer(int size);
-	float train(v2d* batch, v2d* labels);
+	float train(v2d* batch, v2d* labels, bool saveError = false, std::string filename = "error_epoch.csv");
 	v1d predict(v1d* input);
+	v2d predict(v2d* input);
+	void setTestConfig(v2d* testData, v2d* labels, std::string targetFile = "evaluation.csv");
 	void setActivationFct(Fct fct);
 	void initialise();
 	void setLearningRate(float eta);

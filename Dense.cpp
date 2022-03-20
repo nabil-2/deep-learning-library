@@ -44,7 +44,7 @@ void Dense::forward() {
 	if(!outputLayer) activations = MathNN::activate(&activations, activationFct);
 }
 
-void Dense::backward() {
+std::thread* Dense::backward() {
 	v2d gradient;
 	if (outputLayer) {
 		gradient = *upstream;
@@ -55,6 +55,19 @@ void Dense::backward() {
 	v2d transposedWeights = MathNN::transpose(&weights);
 	deltaNext = MathNN::MMProduct(&transposedWeights, &gradient);
 
+	std::thread t([=]() {
+		weightGradient = v2d(weights.size(), v1d(weights[0].size()));
+		for (unsigned int i = 0; i < weights.size(); i++) {
+			for (unsigned int j = 0; j < weights[i].size(); j++) {
+				float avgWeightGradient = 0;
+				for (unsigned int k = 0; k < gradient[0].size(); k++) {
+					avgWeightGradient += (*downstream)[j][k] * gradient[i][k];
+				}
+				weightGradient[i][j] = avgWeightGradient / gradient[0].size();
+			}
+		}
+	});	
+
 	biasGradient = v1d(gradient.size());
 	for (unsigned int i = 0; i < gradient.size(); i++) {
 		float avgBiasGradient = 0.f;
@@ -64,37 +77,31 @@ void Dense::backward() {
 		biasGradient[i] = avgBiasGradient / gradient[i].size();
 	}
 
-	weightGradient = v2d(weights.size(), v1d(weights[0].size()));
-	for (unsigned int i = 0; i < weights.size(); i++) {
-		for (unsigned int j = 0; j < weights[i].size(); j++) {
-			float avgWeightGradient = 0;
-			for (unsigned int k = 0; k < gradient[0].size(); k++) {
-				avgWeightGradient += (*downstream)[j][k] * gradient[i][k];
-			}
-			weightGradient[i][j] = avgWeightGradient / gradient[0].size();
-		}
-	}
-	this->update();
+	t.join();
+	return this->update();
 }
 
-void Dense::update() {
-	float eta = learningRate,
-		  offset = 0.00001;
-	for (unsigned int i = 0; i < bias.size(); i++) {
-		bias_v1[i] = beta1 * bias_v1[i] + (1 - beta1) * biasGradient[i];
-		bias_v2[i] = beta2 * bias_v2[i] + (1 - beta2) * pow(biasGradient[i], 2);
-		float bias_v1h = bias_v1[i] / (1 - pow(beta1, epoch));
-		float bias_v2h = bias_v2[i] / (1 - pow(beta2, epoch));
-		bias[i] -= eta * bias_v1h / sqrt(bias_v2h + offset);
-		for (unsigned int j = 0; j < weights[i].size(); j++) {
-			weight_v1[i][j] = beta1 * weight_v1[i][j] + (1 - beta1) * weightGradient[i][j];
-			weight_v2[i][j] = beta2 * weight_v2[i][j] + (1 - beta2) * pow(weightGradient[i][j], 2);
-			float weight_v1h = weight_v1[i][j] / (1 - pow(beta1, epoch));
-			float weight_v2h = weight_v2[i][j] / (1 - pow(beta2, epoch));
-			weights[i][j] -= eta * weight_v1h / sqrt(weight_v2h + offset);
+std::thread* Dense::update() {
+	std::thread* t = new std::thread([=]() {
+		float eta = learningRate,
+			offset = 0.00001;
+		for (unsigned int i = 0; i < bias.size(); i++) {
+			bias_v1[i] = beta1 * bias_v1[i] + (1 - beta1) * biasGradient[i];
+			bias_v2[i] = beta2 * bias_v2[i] + (1 - beta2) * pow(biasGradient[i], 2);
+			float bias_v1h = bias_v1[i] / (1 - pow(beta1, epoch));
+			float bias_v2h = bias_v2[i] / (1 - pow(beta2, epoch));
+			bias[i] -= eta * bias_v1h / sqrt(bias_v2h + offset);
+			for (unsigned int j = 0; j < weights[i].size(); j++) {
+				weight_v1[i][j] = beta1 * weight_v1[i][j] + (1 - beta1) * weightGradient[i][j];
+				weight_v2[i][j] = beta2 * weight_v2[i][j] + (1 - beta2) * pow(weightGradient[i][j], 2);
+				float weight_v1h = weight_v1[i][j] / (1 - pow(beta1, epoch));
+				float weight_v2h = weight_v2[i][j] / (1 - pow(beta2, epoch));
+				weights[i][j] -= eta * weight_v1h / sqrt(weight_v2h + offset);
+			}
 		}
-	}
-	epoch++;
+		epoch++;
+	});
+	return t;
 }
 
 void Dense::initialise(Fct fct) {

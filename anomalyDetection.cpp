@@ -2,6 +2,8 @@
 #include <string>
 #include <vector>
 #include <fstream>
+#include <filesystem>
+#include <regex>
 
 #include "dNet.h"
 #include "H5Cpp.h"
@@ -12,51 +14,47 @@ using json = nlohmann::json;
 using std::cout;
 using std::endl;
 
-void readH5(std::string filename);
 void readDataset(std::ifstream* stream, v2d* batch, v2d* labels, int start, int end);
+void readDataset(v2d* batch, v2d* labels, std::string path, int start = 0, int end = 0);
+void learnMNITS();
 
 int main() {
+    learnMNITS();
+    return 0;
     const int INPUT_LAYER_SIZE = 2100;
     const int OUTPUT_LAYER_SIZE = 2;
-    const int HIDDEN_LAYERS_COUNT = 1;
-    const int HIDDEN_LAYERS_SIZE = 512;
+    const int HIDDEN_LAYERS_COUNT = 2;
+    const int HIDDEN_LAYERS_SIZE = 64;
     Network network(
         INPUT_LAYER_SIZE,
         HIDDEN_LAYERS_COUNT,
         HIDDEN_LAYERS_SIZE,
         OUTPUT_LAYER_SIZE
     );
-    network.addHiddenLayer(256);
+    network.addHiddenLayer(64);
     network.initialise();
-    
+    network.setActivationFct(Fct::relu);
+
+    int TEST_SIZE = 64;
     std::string dataset = "C:\\Users\\nabil\\Documents\\Programmierung\\Anomaly Detection\\dataset\\rnd.txt";
-    int BATCHSIZE = 128,
-        EPOCHS = 200;
-    v2d batch, labels;
     std::ifstream filestream;
+    v2d testData, testLabels;
     filestream.open(dataset);
+    readDataset(&filestream, &testData, &testLabels, 0, TEST_SIZE);
+    network.setTestConfig(&testData, &testLabels);
+    
+    int BATCHSIZE = 128,
+        EPOCHS = 30;
+    v2d batch, labels;
+    int end;
     for (unsigned int i = 0; i < EPOCHS; i++) {
-        int start = i * BATCHSIZE,
-            end = (i + 1) * BATCHSIZE;
+        int start = i * BATCHSIZE + TEST_SIZE;
+        end = (i + 1) * BATCHSIZE + TEST_SIZE;
         readDataset(&filestream, &batch, &labels, start, end);
         float epochError = network.train(&batch, &labels);
-        cout << "epoch " << i << ", error=" << epochError << endl;
+        cout << "epoch " << i+1 << ", error=" << epochError << endl;
     }
     filestream.close();
-
-    /*v2d m1 = {
-        {1, 2, 3},
-        {4, 5, 6}
-    };
-    v2d m2 = {
-        {7, 8, 13},
-        {9, 10, 14},
-        {11, 12, 15}
-    };
-    v2d m3 = MathNN::MMProduct(&m1, &m2);
-    v1d v1 = {1, 2};
-    v2d m4 = MathNN::MVadd(&m3, &v1);
-    cout << exp(2) << endl;*/
 }
 
 void readDataset(std::ifstream* stream, v2d* batch, v2d* labels, int start, int end) {
@@ -83,34 +81,75 @@ void readDataset(std::ifstream* stream, v2d* batch, v2d* labels, int start, int 
     *labels = MathNN::transpose(labels);
 }
 
-void readH5(std::string filename) {
-    cout << filename << endl;
-    /*int data[2][2] = {
-        {1, 2},
-        {3, 4}
-    };
-    std::vector<std::vector<int>> data2 = {
-        {1, 2},
-        {3, 4}
-    };
-    std::ofstream file("my_file.txt");
-    for (const auto &i : data2) {
-        for (const auto &j : i) {
-            file << j << endl;
+void learnMNITS() {
+    const int INPUT_LAYER_SIZE = 784;
+    const int OUTPUT_LAYER_SIZE = 10;
+    const int HIDDEN_LAYERS_COUNT = 5;
+    const int HIDDEN_LAYERS_SIZE = 256;
+    const int TEST_SIZE = 1000;
+    const int BATCHSIZE = 256;
+    const int EPOCHS = 300;
+    Network network(
+        INPUT_LAYER_SIZE,
+        HIDDEN_LAYERS_COUNT,
+        HIDDEN_LAYERS_SIZE,
+        OUTPUT_LAYER_SIZE
+    );
+    network.addHiddenLayer(128);
+    network.initialise();
+    network.setActivationFct(Fct::relu);
+
+    std::string trainingDataset = "C:\\Users\\nabil\\Documents\\Programmierung\\Anomaly Detection\\dataset\\MNIST\\training";
+    std::string testDataset = "C:\\Users\\nabil\\Documents\\Programmierung\\Anomaly Detection\\dataset\\MNIST\\testing";
+    v2d testData = v2d(),
+        testLabels = v2d();
+    readDataset(&testData, &testLabels, testDataset, 1, 100);
+    network.setTestConfig(&testData, &testLabels);
+
+    v2d batch, labels;
+    int end;
+    for (unsigned int i = 0; i < EPOCHS; i++) {
+        int start = i * BATCHSIZE + testData[0].size();
+        end = (i + 1) * BATCHSIZE + testData[0].size();
+        readDataset(&batch, &labels, trainingDataset, start, end);
+        float epochError = network.train(&batch, &labels, true);
+        cout << "epoch " << i + 1 << ", error=" << epochError << endl;
+    }
+}
+
+extern "C" {
+    #define STB_IMAGE_IMPLEMENTATION
+    #include "stb_image.h"
+}
+
+void readDataset(v2d* batch, v2d* labels, std::string path, int start, int end) {
+    *batch = v2d();
+    *labels = v2d();
+    int i = -1;
+    for (const auto& entry : std::filesystem::directory_iterator(path)) {
+        if (!std::filesystem::is_directory(entry.path())) {
+            i++;
+            if (end > start && end != 0 && (i < start || i >= end)) continue;
+            std::string imgPath{ entry.path().string() };
+            int height = 0, width = 0, channels;
+            v1d imgData = v1d();
+            imgData.reserve(width * height);
+            unsigned char* rawData = stbi_load(imgPath.c_str(), &width, &height, &channels, 1);
+            for (unsigned int j = 0; j < width * height; j++) {
+                imgData.push_back((float)static_cast<int>(rawData[j]) / (float)255);
+            }
+            stbi_image_free(rawData);
+            (*batch).push_back(imgData);
+
+            std::regex expr("\\_(\\d)\\_");
+            std::smatch match;
+            std::regex_search(imgPath, match, expr);
+            int labelIx = stoi(match.str(1));
+            v1d label = v1d(10, 0);
+            label[labelIx] = 1;
+            (*labels).push_back(label);
         }
     }
-    H5::H5File file("h5test.h5", H5F_ACC_TRUNC);
-    hsize_t dimsf[2];
-    dimsf[0] = 2;
-    dimsf[1] = 2;
-    H5::DataSpace dataspace(2, dimsf);
-    H5::IntType datatype(H5::PredType::NATIVE_INT);
-    datatype.setOrder(H5T_ORDER_LE);
-    H5::DataSet dataset = file.createDataSet("ds", datatype, dataspace);
-    dataset.write(data, H5::PredType::NATIVE_INT);
-
-    H5::H5File file2(filename, H5F_ACC_TRUNC);
-    H5::DataSet dataset2 = file.openDataSet("ds");
-    H5::DataSpace filespace = dataset2.getSpace();
-    std::cout << filespace.getSimpleExtentNdims() << std::endl;*/
+    *batch = MathNN::transpose(batch);
+    *labels = MathNN::transpose(labels);
 }

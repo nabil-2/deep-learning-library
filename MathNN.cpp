@@ -1,5 +1,6 @@
 #include "MathNN.h"
 #include <stdexcept>
+#include <thread>
 
 float MathNN::sigmoid(float x) {
 	return 1 / (1 + exp(-1 * x));
@@ -13,15 +14,50 @@ v2d MathNN::MMProduct(v2d* matrix1, v2d* matrix2) {
 	if ((*matrix1)[0].size() != matrix2->size()) {
 		throw std::invalid_argument("width of matrix 1 unequal to height of matrix 2");
 	}
-	v2d result = v2d(matrix1->size(),  v1d((*matrix2)[0].size()));
-	for (unsigned int i = 0; i < result.size(); i++) {
-		for (unsigned int j = 0; j < result[i].size(); j++) {
-			v1d column = v1d(matrix2->size());
-			for (unsigned int k = 0; k < matrix2->size(); k++) {
-				column[k] = (*matrix2)[k][j];
-			}
-			result[i][j] = MathNN::VVscalar(&(matrix1->at(i)), &column);
+	const int HEIGHT = matrix1->size();
+	const int WIDTH = (*matrix2)[0].size();
+	int threadCount = 4;
+	std::vector<std::vector<int>> threadDistr;
+	if (HEIGHT < threadCount) {
+		threadCount = HEIGHT;
+	} else {
+		int cut = (int) HEIGHT / threadCount;
+		for (int i = 0; i < threadCount; i++) {
+			int end = threadCount-1 == i ? HEIGHT : (i + 1) * cut;
+			threadDistr.push_back({ i*cut, end});
 		}
+	}
+	std::vector<std::thread> threads = std::vector<std::thread>(threadDistr.size());
+	std::vector<v2d*> subResults;
+	for (unsigned int i = 0; i < threads.size(); i++) {
+		subResults.push_back(new v2d());
+	}
+	for (unsigned int t = 0; t < threads.size(); t++) {
+		threads[t] = std::thread([=]() {
+			int subHeight = threadDistr[t][1] - threadDistr[t][0];
+			(*subResults[t]).reserve(subHeight);
+			for (unsigned int i = 0; i < subHeight; i++) {
+				(*subResults[t]).emplace_back(v1d());
+				(*subResults[t])[i].reserve(WIDTH);
+				for (unsigned int j = 0; j < WIDTH; j++) {
+					v1d column = v1d(matrix2->size());
+					for (unsigned int k = 0; k < matrix2->size(); k++) {
+						column[k] = (*matrix2)[k][j];
+					}
+					(*subResults[t])[i].emplace_back(MathNN::VVscalar(&(matrix1->at(threadDistr[t][0] + i)), &column));
+				}
+			}
+		});
+	}
+	for (unsigned int i = 0; i < threads.size(); i++) {
+		threads[i].join();
+	}
+	v2d result = v2d();
+	for (unsigned int i = 0; i < subResults.size(); i++) {
+		auto begin = (*subResults[i]).begin();
+		auto end = (*subResults[i]).end();
+		result.insert(result.end(), begin, end);
+		delete subResults[i];
 	}
 	return result;
 }

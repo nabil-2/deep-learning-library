@@ -1,6 +1,7 @@
 #pragma once
 
 #include "typedef.h"
+#include <thread>
 
 class Dense {
 private:
@@ -10,7 +11,7 @@ private:
 	v2d weights;
 	v1d bias;
 	Fct activationFct;
-	void update();
+	std::thread* update();
 //forward pass
 	v2d activations;
 	v2d* downstream = nullptr;
@@ -38,6 +39,6 @@ public:
 	v2d* getGradient();
 	void initialise(Fct fct);
 	void forward();
-	void backward();
+	std::thread* backward();
 };
 
