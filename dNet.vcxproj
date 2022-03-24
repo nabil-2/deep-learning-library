@@ -151,14 +151,14 @@
     <ClCompile Include="Dense.cpp" />
     <ClCompile Include="MathNN.cpp" />
     <ClCompile Include="Network.cpp" />
-    <ClCompile Include="Softmax.cpp" />
+    <ClCompile Include="OutputAct.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Dense.h" />
     <ClInclude Include="dNet.h" />
     <ClInclude Include="MathNN.h" />
     <ClInclude Include="Network.h" />
-    <ClInclude Include="Softmax.h" />
+    <ClInclude Include="OutputAct.h" />
     <ClInclude Include="typedef.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

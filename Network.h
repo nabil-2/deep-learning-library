@@ -4,19 +4,20 @@
 #include <vector>
 #include "typedef.h"
 #include "Dense.h"
-#include "Softmax.h"
+#include "OutputAct.h"
 
 class Network {
 private:
 	Fct actFct = Fct::relu;
 	std::vector<Dense*> layers;
-	Softmax* softmax;
+	OutputAct* outAct;
 	float learningRate = 0.0005;
 	int epoch = 0;
 	v2d *testData = nullptr,
 		*testLabels = nullptr;
 	std::string evaluationFile;
 	void evaluate();
+	Loss loss = Loss::crossEntropy;
 public:
 	Network(int inputLayerSize, int hiddenLayersCount, int hiddenLayerSize, int outputLayerSize);
 	Network(int inputLayerSize, int outputLayerSize) : Network(inputLayerSize, 0, 0, outputLayerSize) {};
@@ -28,5 +29,6 @@ public:
 	void setActivationFct(Fct fct);
 	void initialise();
 	void setLearningRate(float eta);
+	void setLoss(Loss loss);
 	~Network();
 };

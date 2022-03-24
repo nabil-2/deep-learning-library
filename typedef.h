@@ -14,3 +14,8 @@ enum class Fct {
 	swish,
 	softmax
 };
+
+enum class Loss {
+	meanSquared,
+	crossEntropy
+};

@@ -17,7 +17,7 @@ Network::Network(int inputLayerSize, int hiddenLayersCount, int hiddenLayerSize,
 	}
 	layer = new Dense(outputLayerSize, layer->getActivations());
 	layers.push_back(layer);
-	softmax = new Softmax(outputLayerSize, layer->getActivations());
+	outAct = new OutputAct(outputLayerSize, layer->getActivations());
 }
 
 void Network::evaluate() {
@@ -65,26 +65,34 @@ float Network::train(v2d* batch, v2d* labels, bool saveError, std::string filena
 	}
 	v2d gradient = v2d(prediction.size(), v1d(prediction[0].size()));
 	float avgError = 0;
-	for (unsigned int j = 0; j < prediction[0].size(); j++) {
-		float layerError = 0;
-		for (unsigned int i = 0; i < prediction.size(); i++) {
-			layerError += (*labels)[i][j] * log(prediction[i][j]);
-			gradient[i][j] = (-1) * (*labels)[i][j] / prediction[i][j];
+	if (this->loss == Loss::crossEntropy) {
+		for (unsigned int j = 0; j < prediction[0].size(); j++) {
+			float layerError = 0;
+			for (unsigned int i = 0; i < prediction.size(); i++) {
+				layerError += (*labels)[i][j] * log(prediction[i][j]);
+				gradient[i][j] = (-1) * (*labels)[i][j] / prediction[i][j];
+			}
+			layerError *= -1;
+			avgError += layerError;
 		}
-		layerError *= -1;
-		avgError += layerError;
+		avgError /= prediction[0].size();
+	} else if (this->loss == Loss::meanSquared) {
+		for (unsigned int j = 0; j < prediction[0].size(); j++) {
+			for (unsigned int i = 0; i < prediction.size(); i++) {
+				gradient[i][j] += prediction[i][j] - (*labels)[i][j];
+				avgError += pow(prediction[i][j] - (*labels)[i][j], 2);
+			}
+		}
+		avgError /= prediction.size() * prediction[0].size();
 	}
-	avgError /= prediction[0].size();
-	softmax->setUpstream(&gradient);
-	softmax->backward(labels);
+	outAct->setUpstream(&gradient);
+	outAct->backward(labels);
 	std::vector<std::thread*> threads = std::vector<std::thread*>();
 	for (unsigned int i = layers.size() - 1; i >= 1; i--) {
 		threads.push_back(layers[i]->backward());
 	}
 	for (unsigned int i = 0; i < threads.size(); i++) {
 		(*threads[i]).join();
-	}
-	for (unsigned int i = 0; i < threads.size(); i++) {
 		delete threads[i];
 	}
 	epoch++;
@@ -110,8 +118,8 @@ v2d Network::predict(v2d* input) {
 	for (unsigned int i = 0; i < layers.size(); i++) {
 		layers[i]->forward();
 	}
-	softmax->forward();
-	v2d* prediction = softmax->getActivations();
+	outAct->forward();
+	v2d* prediction = outAct->getActivations();
 	return *prediction;
 }
 
@@ -127,7 +135,7 @@ void Network::setActivationFct(Fct fct) {
 
 void Network::initialise() {
 	Dense* nextLayer = layers[layers.size() - 1];
-	nextLayer->setUpstream(softmax->getGradient());
+	nextLayer->setUpstream(outAct->getGradient());
 	for (unsigned int i = layers.size() - 2; i >= 1; i--) {
 		nextLayer->initialise(actFct);
 		layers[i]->setUpstream(nextLayer->getGradient());
@@ -135,6 +143,7 @@ void Network::initialise() {
 	}
 	nextLayer->initialise(actFct);
 	this->setLearningRate(this->learningRate);
+	outAct->setLoss(this->loss);
 }
 
 void Network::setLearningRate(float eta) {
@@ -144,9 +153,13 @@ void Network::setLearningRate(float eta) {
 	}
 }
 
+void Network::setLoss(Loss loss) {
+	this->loss = loss;
+}
+
 Network::~Network() {
 	for (unsigned int i = 0; i < layers.size(); i++) {
 		delete layers[i];
 	}
-	delete softmax;
+	delete outAct;
 }

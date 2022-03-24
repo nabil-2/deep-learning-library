@@ -27,7 +27,7 @@
     <ClCompile Include="MathNN.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="Softmax.cpp">
+    <ClCompile Include="OutputAct.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
   </ItemGroup>
@@ -47,7 +47,7 @@
     <ClInclude Include="MathNN.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="Softmax.h">
+    <ClInclude Include="OutputAct.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
   </ItemGroup>
