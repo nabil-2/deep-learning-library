@@ -16,9 +16,9 @@ private:
 	v2d *testData = nullptr,
 		*testLabels = nullptr;
 	std::string evaluationFile;
-	void evaluate();
 	Loss loss = Loss::crossEntropy;
 public:
+	void evaluate();
 	Network(int inputLayerSize, int hiddenLayersCount, int hiddenLayerSize, int outputLayerSize);
 	Network(int inputLayerSize, int outputLayerSize) : Network(inputLayerSize, 0, 0, outputLayerSize) {};
 	void addHiddenLayer(int size);

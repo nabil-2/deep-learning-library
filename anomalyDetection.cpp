@@ -19,8 +19,8 @@ void readDataset(v2d* batch, v2d* labels, std::string path, int start = 0, int e
 void learnMNITS();
 
 int main() {
-    //learnMNITS();
-    //return 0;
+    learnMNITS();
+    return 0;
     const int INPUT_LAYER_SIZE = 2100;
     const int OUTPUT_LAYER_SIZE = 2;
     const int HIDDEN_LAYERS_COUNT = 4;
@@ -31,21 +31,22 @@ int main() {
         HIDDEN_LAYERS_SIZE,
         OUTPUT_LAYER_SIZE
     );
-    network.addHiddenLayer(64);
-    network.setLoss(Loss::crossEntropy);
-    network.initialise();
+    //network.addHiddenLayer(512);
+    network.setLoss(Loss::meanSquared);
     network.setActivationFct(Fct::relu);
+    network.initialise();
 
-    int TEST_SIZE = 256;
+    int TEST_SIZE = 128;
     std::string dataset = "C:\\Users\\nabil\\Documents\\Programmierung\\Anomaly Detection\\dataset\\rnd_us.txt";
     std::ifstream filestream;
     v2d testData, testLabels;
     filestream.open(dataset);
     readDataset(&filestream, &testData, &testLabels, 0, TEST_SIZE);
     network.setTestConfig(&testData, &testLabels);
-    
-    int BATCHSIZE = 32,
-        EPOCHS = 10;
+    network.evaluate();
+
+    int BATCHSIZE = 256,
+        EPOCHS = 200;
     v2d batch, labels;
     int end;
     for (unsigned int i = 0; i < EPOCHS; i++) {
@@ -87,9 +88,9 @@ void learnMNITS() {
     const int OUTPUT_LAYER_SIZE = 10;
     const int HIDDEN_LAYERS_COUNT = 5;
     const int HIDDEN_LAYERS_SIZE = 256;
-    const int TEST_SIZE = 500;
-    const int BATCHSIZE = 512;
-    const int EPOCHS = 400;
+    const int TEST_SIZE = 100;
+    const int BATCHSIZE = 256;
+    const int EPOCHS = 230;
     Network network(
         INPUT_LAYER_SIZE,
         HIDDEN_LAYERS_COUNT,
@@ -97,19 +98,21 @@ void learnMNITS() {
         OUTPUT_LAYER_SIZE
     );
     network.addHiddenLayer(128);
+    network.setLoss(Loss::crossEntropy);
+    network.setActivationFct(Fct::leakyRelu);
+    network.setLearningRate(0.005);
     network.initialise();
-    network.setActivationFct(Fct::relu);
 
     std::string trainingDataset = "C:\\Users\\nabil\\Documents\\Programmierung\\Anomaly Detection\\dataset\\MNIST\\training";
     std::string testDataset = "C:\\Users\\nabil\\Documents\\Programmierung\\Anomaly Detection\\dataset\\MNIST\\testing";
     v2d testData = v2d(),
         testLabels = v2d();
-    readDataset(&testData, &testLabels, testDataset, 1, 100);
+    readDataset(&testData, &testLabels, testDataset, 0, TEST_SIZE);
     network.setTestConfig(&testData, &testLabels);
 
     v2d batch, labels;
     int end;
-    for (unsigned int i = 0; i < EPOCHS; i++) {
+    for (int i = 0; i < EPOCHS; i++) {
         int start = i * BATCHSIZE + testData[0].size();
         end = (i + 1) * BATCHSIZE + testData[0].size();
         readDataset(&batch, &labels, trainingDataset, start, end);
@@ -117,6 +120,13 @@ void learnMNITS() {
         float epochError = network.train(&batch, &labels, true);
         cout << "epoch " << i + 1 << ", error=" << epochError << endl;
     }
+
+    cout << "------------------------------------------" << endl;
+
+    readDataset(&testData, &testLabels, testDataset, 0, 10000);
+    network.setTestConfig(&testData, &testLabels, "final_test.csv");
+    network.evaluate();
+
     cout << "finished" << endl;
     system("pause");
 }

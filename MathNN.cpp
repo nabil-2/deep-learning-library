@@ -132,7 +132,8 @@ v2d MathNN::activate(v2d* matrix, Fct fct) {
 		case Fct::sigmoid:
 			for (unsigned int i = 0; i < result.size(); i++) {
 				for (unsigned int j = 0; j < result[i].size(); j++) {
-					result[i][j] = 1/(1+exp(-1*result[i][j]));
+					//result[i][j] = 1/(1+exp(-1*result[i][j]));
+					result[i][j] = sigmoid(result[i][j]);
 				}
 			}
 			break;
@@ -176,8 +177,9 @@ v2d MathNN::activate_derivative(v2d* matrix, Fct fct) {
 	case Fct::sigmoid:
 		for (unsigned int i = 0; i < result.size(); i++) {
 			for (unsigned int j = 0; j < result[i].size(); j++) {
-				float ex = exp(-1 * (*matrix)[i][j]);
-				result[i][j] =  ex / pow(1 + ex, 2);
+				//float ex = exp(-1 * (*matrix)[i][j]);
+				//result[i][j] =  ex / pow(1 + ex, 2);
+				result[i][j] = sigmoid(result[i][j])*(1 - sigmoid(result[i][j]));
 			}
 		}
 		break;
