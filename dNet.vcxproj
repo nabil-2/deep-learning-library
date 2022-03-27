@@ -147,7 +147,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="anomalyDetection.cpp" />
+    <ClCompile Include="digitClassification.cpp" />
     <ClCompile Include="Dense.cpp" />
     <ClCompile Include="MathNN.cpp" />
     <ClCompile Include="Network.cpp" />

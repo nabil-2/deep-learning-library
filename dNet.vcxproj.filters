@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="anomalyDetection.cpp">
+    <ClCompile Include="digitClassification.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
     <ClCompile Include="Network.cpp">
